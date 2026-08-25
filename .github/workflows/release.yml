@@ -1,0 +1,36 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test the validator
+        run: python3 tests/test_check_urls.py
+
+      - name: Build the claude.ai bundle
+        run: bash scripts/build-skill.sh
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/signal.skill
+          generate_release_notes: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signal-skill
+          path: dist/signal.skill

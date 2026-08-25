@@ -36,8 +36,8 @@ _TRAILING = ".,;:!?\u2026'\")]}>*_"
 
 _TRACKING_PREFIXES = ("utm_",)
 _TRACKING_KEYS = {
-    "fbclid", "gclid", "igshid", "mc_cid", "mc_eid",
-    "ref", "ref_src", "ref_url", "s", "si", "spm", "share_id",
+    "app", "feature", "fbclid", "gclid", "igshid", "mc_cid", "mc_eid",
+    "pp", "ref", "ref_src", "ref_url", "s", "si", "spm", "share_id", "t",
 }
 
 
@@ -51,39 +51,59 @@ def _strip_trailing(url: str) -> str:
 
 
 def normalize(url: str) -> str:
-    """Collapse cosmetic variation without collapsing meaningful difference."""
+    """Collapse cosmetic variation without collapsing meaningful difference.
+
+    Host and scheme are case-insensitive per RFC 3986 and get lowercased. Path
+    and query are NOT: a YouTube video id is case-sensitive base64url, so
+    folding case there would make two different videos compare equal and let a
+    fabricated link pass. Rejecting a real link is a bug. Accepting a fake one
+    defeats the point of the tool.
+    """
     url = _strip_trailing(url.strip())
     try:
         parts = urlsplit(url)
     except ValueError:
-        return url.lower()
+        return url
 
-    host = parts.hostname or ""
+    host = (parts.hostname or "").lower()
     if host.startswith("www."):
         host = host[4:]
-    # Reddit and X serve the same content under several front doors.
+
+    path = parts.path
+    query = parts.query
+
+    # youtu.be/<id> and youtube.com/watch?v=<id> address the same video.
+    if host == "youtu.be":
+        video_id = path.lstrip("/").split("/")[0]
+        if video_id:
+            path, query = "/watch", f"v={video_id}"
+        host = "youtube.com"
+
+    # Reddit and X serve identical content under several front doors.
     host = {
         "old.reddit.com": "reddit.com",
+        "new.reddit.com": "reddit.com",
         "np.reddit.com": "reddit.com",
         "m.reddit.com": "reddit.com",
         "twitter.com": "x.com",
         "mobile.twitter.com": "x.com",
-        "youtu.be": "youtube.com",
+        "nitter.net": "x.com",
         "m.youtube.com": "youtube.com",
+        "music.youtube.com": "youtube.com",
     }.get(host, host)
 
-    path = parts.path.rstrip("/") or "/"
+    path = path.rstrip("/") or "/"
 
-    query = [
+    pairs = [
         (k, v)
-        for k, v in parse_qsl(parts.query, keep_blank_values=True)
+        for k, v in parse_qsl(query, keep_blank_values=True)
         if k.lower() not in _TRACKING_KEYS
         and not k.lower().startswith(_TRACKING_PREFIXES)
     ]
-    query.sort()
-    query_str = "&".join(f"{k}={v}" for k, v in query)
+    pairs.sort()
+    query_str = "&".join(f"{k}={v}" for k, v in pairs)
 
-    return urlunsplit(("https", host.lower(), path, query_str, "")).lower()
+    return urlunsplit(("https", host, path, query_str, ""))
 
 
 def extract(text: str) -> list[str]:

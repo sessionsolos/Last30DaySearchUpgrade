@@ -72,6 +72,33 @@ your instruction file alone.
 Other agent hosts: drop the same folder in `~/.codex/skills/signal/` or
 `~/.agents/skills/signal/`.
 
+### claude.ai on the web
+
+The web Skills UI takes a `.skill` bundle, which is a zip with one top-level
+folder. Uploading `SKILL.md` by itself leaves out the validator and the reference
+file, and the skill will tell you so on first run.
+
+Download `signal.skill` from the latest release, or build it yourself:
+
+```bash
+bash scripts/build-skill.sh          # writes dist/signal.skill
+```
+
+Upload it under Customize > Skills > + > Create skill > Upload a skill. Turn on
+"Code execution and file creation" under Capabilities first, since the skill
+cannot run without it.
+
+Know what you are getting. The claude.ai container is wiped when the session
+ends, so the engine is re-cloned on every run. `python3` there is 3.11, under the
+engine's 3.12 floor, so the skill invokes `python3.12` explicitly. And there is no
+`~/.config/last30days/.env`, so X, TikTok, Instagram, and keyed web search are
+dark unless you get credentials into the container yourself. Reddit, Hacker News,
+Polymarket, GitHub, and YouTube still work. That is a narrower read, not a broken
+one, but it is narrower.
+
+For repeat use, a local install on a machine that keeps its filesystem is the
+better setup.
+
 ## Requirements
 
 Python 3.12 or newer. That is the only hard requirement.
@@ -112,20 +139,36 @@ and writes the answer in your voice with attributed verbatim quotes.
 The one thing the model is not trusted to self-police.
 
 ```bash
-python3 scripts/check_urls.py --evidence engine_stdout.txt --draft draft.md
+python3 skill/scripts/check_urls.py --evidence engine_stdout.txt --draft draft.md
 ```
 
 Exits 1 and names every URL in the draft that the research did not return, plus
-any empty `[label]()` link. A status id that is one character wrong fails.
-Cosmetic differences do not: `old.reddit.com`, `twitter.com`, `youtu.be`, `www.`,
-trailing slashes, and `utm_` tracking parameters normalize before comparison, so
-a real citation is never rejected over formatting.
+any empty `[label]()` link.
+
+Two things it has to get right, and they pull against each other. Cosmetic
+variants of a real link must pass: `old.reddit.com`, `twitter.com`,
+`youtu.be/<id>` against `youtube.com/watch?v=<id>`, `www.`, `http`, trailing
+slashes, query order, and `utm_` / `t` / `feature` / `s` tracking parameters all
+fold before comparison. And genuinely different URLs must not: host and scheme
+are case-folded because RFC 3986 says they are case-insensitive, while path and
+query are left alone, since a YouTube video id is case-sensitive and folding it
+would let a fabricated link through.
+
+```bash
+python3 tests/test_check_urls.py
+```
+
+30 checks, split into false-reject cases (a real citation getting flagged) and
+false-accept cases (a fabricated one slipping past). The second group matters
+more, because a validator that passes everything is worse than no validator.
+Both classes of bug shipped in the first version, which was hand-checked on
+three cases rather than tested. CI runs this on every push.
 
 Evidence can come in on stdin instead:
 
 ```bash
 python3 last30days.py "topic" --emit=compact --plan "$PLAN" | tee /tmp/ev.txt
-python3 scripts/check_urls.py --evidence /tmp/ev.txt --draft /tmp/draft.md
+python3 skill/scripts/check_urls.py --evidence /tmp/ev.txt --draft /tmp/draft.md
 ```
 
 ## Privacy
@@ -143,11 +186,15 @@ Browser cookie extraction is scoped to the x.com domain and the `auth_token` and
 
 ## Status
 
-The instruction layer and the validator are written and the validator is tested
-against fabricated status ids, invented permalinks, and empty links. This has not
-been run end to end against a live topic. The query plan hitting a real apostrophe
-or an unresolvable handle is untested, and the skill description is unoptimized,
-so it may not always trigger when it should. Issues and PRs welcome.
+The validator has a 30-check suite covering URL normalization and the CLI's
+pass and fail paths, and CI runs it on every push.
+
+The skill itself has not been run end to end against a live topic. The query plan
+hitting a real apostrophe or an unresolvable handle is untested, and the skill
+description is unoptimized, so it may not always trigger when it should.
+
+Issues and PRs welcome. A bug report that comes with a failing case in
+`tests/test_check_urls.py` is the fastest possible fix.
 
 ## Attribution
 

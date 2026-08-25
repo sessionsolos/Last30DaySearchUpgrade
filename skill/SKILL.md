@@ -22,20 +22,45 @@ never overwrite this file.
 ```bash
 ENGINE="${SIGNAL_ENGINE:-$HOME/tools/last30days-engine}"
 ENGINE_PY="$ENGINE/skills/last30days/scripts/last30days.py"
+
+# The engine needs 3.12. Several sandboxes ship python3 as 3.11, so resolve
+# the interpreter once here and use "$PY" for every call after this point.
+PY=$(command -v python3.12 || command -v python3)
+"$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3,12) else 1)' \
+  || { echo "signal: need Python 3.12+, found $("$PY" --version)"; }
 ```
 
-If `$ENGINE_PY` does not exist, tell the user and stop. Do not go hunting for
-another copy on disk. Setup is:
+If `$ENGINE_PY` does not exist, check whether this host is ephemeral before
+telling the user anything. On a fresh sandbox with no persistent home directory
+(claude.ai, Cowork, a CI runner), clone it into the session and continue:
+
+```bash
+git clone --depth 1 https://github.com/mvanhorn/last30days-skill.git "$ENGINE"
+```
+
+Then check the interpreter. The engine requires Python 3.12 and several
+sandboxes default `python3` to 3.11. `$PY` above already resolved to `python3.12` if one exists. If the guard
+printed a version error, say so and stop rather than failing halfway through a run.
+
+On a persistent machine, do not clone silently. Tell the user the engine is
+missing and give them the setup command:
 
 ```bash
 git clone https://github.com/mvanhorn/last30days-skill.git ~/tools/last30days-engine
 ```
 
+Say plainly what an ephemeral session costs before running: the clone repeats
+every session, and with no `~/.config/last30days/.env` there are no API keys, so
+X, TikTok, Instagram, and keyed web search are dark. Reddit, Hacker News,
+Polymarket, and GitHub still work with no keys, and `yt-dlp` adds YouTube once
+installed. That is a real community read, just a narrower one. If the user needs
+X for this question, their keys have to reach the container first.
+
 Update with `git -C ~/tools/last30days-engine pull`. Python 3.12+ is required.
 `yt-dlp` on PATH adds YouTube. Reddit, Hacker News, Polymarket, and GitHub work
 with no keys at all, so a bare install is already useful. Keys for X, TikTok,
 Instagram, and web search go in `~/.config/last30days/.env`. Run
-`python3 "$ENGINE_PY" --diagnose` to see what is live.
+`"$PY" "$ENGINE_PY" --diagnose` to see what is live.
 
 ## The output contract
 
@@ -67,7 +92,7 @@ This rule is enforced by a script, not by good intentions. Tee the engine's stdo
 to a file, write your draft to a file, and run the check before you send:
 
 ```bash
-python3 "$SKILL_DIR/scripts/check_urls.py" --evidence /tmp/signal-evidence.txt --draft /tmp/signal-draft.md
+"$PY" "$SKILL_DIR/scripts/check_urls.py" --evidence /tmp/signal-evidence.txt --draft /tmp/signal-draft.md
 ```
 
 It exits 1 and names every URL in your draft that the research did not return,
@@ -75,6 +100,11 @@ plus any empty `[label]()` link. A one-character-wrong status id fails. Cosmetic
 differences do not: `old.reddit.com`, `twitter.com`, `youtu.be`, `www.`, trailing
 slashes, and `utm_` tracking params all normalize before comparison, so a real
 citation is never rejected for formatting.
+
+If `scripts/check_urls.py` is not on disk next to this file, the install is
+incomplete. Say so and cite by plain label for the whole answer. Do not write a
+replacement validator: an untested stand-in that passes everything is worse than
+an honest admission that nothing checked.
 
 If it fails, fix the citation. Do not send around it.
 
@@ -184,6 +214,7 @@ weaving tool. Anchor every subquery, not just the first.
 ```bash
 ENGINE="${SIGNAL_ENGINE:-$HOME/tools/last30days-engine}"
 ENGINE_PY="$ENGINE/skills/last30days/scripts/last30days.py"
+PY=$(command -v python3.12 || command -v python3)
 
 PLAN=$(mktemp "${TMPDIR:-/tmp}/signal-plan-XXXXXX")
 trap 'rm -f "$PLAN"' EXIT
@@ -191,7 +222,7 @@ cat >| "$PLAN" <<'PLAN_JSON'
 { ...your plan... }
 PLAN_JSON
 
-python3 "$ENGINE_PY" "TOPIC" \
+"$PY" "$ENGINE_PY" "TOPIC" \
   --emit=compact \
   --plan "$PLAN" \
   --x-handle HANDLE \
