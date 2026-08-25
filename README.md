@@ -109,10 +109,24 @@ this does research.
 
 Python 3.12 or newer. That is the only hard requirement.
 
-Reddit, Hacker News, Polymarket, and GitHub work with no API keys at all, so a
-bare install is already useful. `yt-dlp` on PATH adds YouTube search and
-transcripts. Keys for X, TikTok, Instagram, and web search go in
-`~/.config/last30days/.env`.
+**What a keyless install actually gets you.** Hacker News, Polymarket, and GitHub
+work completely with no key. `yt-dlp` on PATH adds YouTube search and full
+transcripts, also free.
+
+Reddit is the important caveat. The free keyless path finds threads and returns
+titles and scores, then Reddit rate-limits it, typically after somewhere between
+3 and 22 items per pass. That means you generally get the headline of a
+400-comment thread and not the comments inside it. Since the comments are the
+reason to run this at all, a keyless install is a real but partial tool.
+
+`SCRAPECREATORS_API_KEY` is what unlocks full Reddit comment threads, and also
+adds TikTok, Instagram, Threads, Pinterest, LinkedIn, and YouTube comments. The
+free tier is 100 credits, one time, no monthly reset, which is roughly half of a
+single run. Paid tiers start at $10. Credits do not expire. Treat this as a paid
+dependency for comment-level research, not a free one.
+
+Keys for X, TikTok, Instagram, and web search all go in
+`~/.config/last30days/.env`. Run `--diagnose` to see what is actually live.
 
 Check what is live:
 

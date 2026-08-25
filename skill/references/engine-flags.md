@@ -180,7 +180,7 @@ file; macOS Keychain is lowest priority.
 | `LAST30DAYS_CORPUS_DIRS` | Default corpus directories. |
 | `FROM_BROWSER` | Browser cookie source for X auth. Unset means no cookie reads at all. `off` disables. `auto` tries every Chromium browser. |
 | `AUTH_TOKEN`, `CT0` | X cookies passed directly, no browser read. |
-| `SCRAPECREATORS_API_KEY` | TikTok, Instagram, Threads, Pinterest, LinkedIn, YouTube comments. |
+| `SCRAPECREATORS_API_KEY` | Full Reddit comment threads (the free path rate-limits after roughly 3 to 22 items), plus TikTok, Instagram, Threads, Pinterest, LinkedIn, YouTube comments. Paid: 100 free credits one time, then from $10. |
 | `BRAVE_API_KEY` | Web search. |
 | `PERPLEXITY_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY` | Optional providers. |
 | `BSKY_HANDLE`, `BSKY_APP_PASSWORD` | Bluesky. |
@@ -192,8 +192,11 @@ unset.
 ## What each source is good for
 
 **Reddit.** The most useful source most of the time. Threaded argument, real
-disagreement, top comments with counts. Free, no key. Skews technical, US, and
-toward the motivated minority who post.
+disagreement, top comments with counts. Skews technical, US, and toward the
+motivated minority who post. Discovery is free, but the keyless path gets
+rate-limited before it can read most comment threads, so deep Reddit needs
+`SCRAPECREATORS_API_KEY`. Without it, expect titles and scores rather than the
+argument underneath.
 
 **Hacker News.** Developer consensus with unusually high comment quality.
 Contrarian by default and confidently wrong about anything outside software.
