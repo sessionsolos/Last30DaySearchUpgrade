@@ -88,16 +88,22 @@ Upload it under Customize > Skills > + > Create skill > Upload a skill. Turn on
 "Code execution and file creation" under Capabilities first, since the skill
 cannot run without it.
 
-Know what you are getting. The claude.ai container is wiped when the session
-ends, so the engine is re-cloned on every run. `python3` there is 3.11, under the
-engine's 3.12 floor, so the skill invokes `python3.12` explicitly. And there is no
-`~/.config/last30days/.env`, so X, TikTok, Instagram, and keyed web search are
-dark unless you get credentials into the container yourself. Reddit, Hacker News,
-Polymarket, GitHub, and YouTube still work. That is a narrower read, not a broken
-one, but it is narrower.
+**Research does not work in a claude.ai code-execution container.** The sandbox
+runs behind an egress allowlist that permits GitHub and the package registries and
+blocks everything else. `reddit.com`, `hn.algolia.com`, and the Polymarket API all
+return `403` with `x-deny-reason: host_not_allowed`. The engine clones fine and
+then every source fails at the proxy. Nothing you configure inside the container
+changes this.
 
-For repeat use, a local install on a machine that keeps its filesystem is the
-better setup.
+Verified 2026-08-25 on claude.ai. Cowork and other hosted sandboxes may differ,
+and an allowlist can change, so run `--diagnose` before assuming.
+
+What the uploaded skill is still good for there: reading the SKILL.md contract,
+running `check_urls.py` against evidence you paste in, and inspecting the engine's
+flags. For research, install locally.
+
+A local install on a machine with real network access is the only setup where
+this does research.
 
 ## Requirements
 

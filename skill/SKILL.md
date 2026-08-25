@@ -49,18 +49,24 @@ missing and give them the setup command:
 git clone https://github.com/mvanhorn/last30days-skill.git ~/tools/last30days-engine
 ```
 
-Say plainly what an ephemeral session costs before running: the clone repeats
-every session, and with no `~/.config/last30days/.env` there are no API keys, so
-X, TikTok, Instagram, and keyed web search are dark. Reddit, Hacker News,
-Polymarket, and GitHub still work with no keys, and `yt-dlp` adds YouTube once
-installed. That is a real community read, just a narrower one. If the user needs
-X for this question, their keys have to reach the container first.
+Before researching on an ephemeral host, probe egress. Some sandboxes sit behind
+an allowlist that permits GitHub and package registries and blocks everything
+else, so the clone succeeds and every source then fails at the proxy:
 
-Update with `git -C ~/tools/last30days-engine pull`. Python 3.12+ is required.
-`yt-dlp` on PATH adds YouTube. Reddit, Hacker News, Polymarket, and GitHub work
-with no keys at all, so a bare install is already useful. Keys for X, TikTok,
-Instagram, and web search go in `~/.config/last30days/.env`. Run
-`"$PY" "$ENGINE_PY" --diagnose` to see what is live.
+```bash
+curl -s -o /dev/null -w "%{http_code}" --max-time 8 https://hn.algolia.com/api/v1/search
+```
+
+A `403` here (check for an `x-deny-reason: host_not_allowed` header) means
+research is impossible in this container. Say so and stop. Do not run the engine,
+do not report a quiet window, and do not fall back to web search and present it as
+community signal. The user needs a local install, and the useful answer is telling
+them that in one sentence.
+
+If egress is open, say what the session still costs: the clone repeats every
+session, and with no `~/.config/last30days/.env` there are no API keys, so X,
+TikTok, Instagram, and keyed web search are dark. Reddit, Hacker News, Polymarket,
+and GitHub work without keys. That is a narrower read, and worth naming up front.
 
 ## The output contract
 
